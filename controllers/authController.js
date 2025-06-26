@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const { resetPasswordEmailTemplate } = require("../utils/email-template");
 const generateToken = require("../utils/generate-token");
 
 // @desc    Register user
@@ -217,6 +218,90 @@ exports.updatePassword = async (req, res) => {
       success: false,
       message: "Server Error",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+const crypto = require("crypto");
+const sendEmail = require("../utils/send-email"); // You need to create this util
+
+// @desc    Forgot password
+// @route   POST /api/auth/forgotpassword
+// @access  Public
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ message: "User not found with that email" });
+    }
+
+    const resetToken = user.getResetPasswordToken();
+    await user.save({ validateBeforeSave: false });
+
+    const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+
+    await sendEmail({
+      email: user.email,
+      subject: "Password Reset Request",
+      message: resetPasswordEmailTemplate(user.name, resetUrl),
+    });
+
+    res.status(200).json({ success: true, message: "Email sent" });
+  } catch (error) {
+    console.error(error);
+    if (user) {
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+    }
+
+    res.status(500).json({ message: "Email could not be sent" });
+  }
+};
+// @desc    Reset password
+// @route   PUT /api/auth/resetpassword/:resettoken
+// @access  Public
+exports.resetPassword = async (req, res) => {
+  try {
+    // Hash the token
+    const resetPasswordToken = crypto
+      .createHash("sha256")
+      .update(req.params.resettoken)
+      .digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired token",
+      });
+    }
+
+    // Set new password
+    user.password = req.body.password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    const token = generateToken(user._id);
+
+    res.status(200).json({
+      success: true,
+      token,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
     });
   }
 };
