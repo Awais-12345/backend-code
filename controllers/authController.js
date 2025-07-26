@@ -305,3 +305,53 @@ exports.resetPassword = async (req, res) => {
     });
   }
 };
+// controllers/registrationController.js
+const Register = require("../models/Registration");
+
+exports.registerDetails = async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      fatherName,
+      cnic,
+      dateOfBirth,
+      city,
+      state,
+      country,
+      phoneNumber,
+    } = req.body;
+
+    const image = req.file?.filename;
+
+    const user = await Register.findById(req.user.id);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    user.firstName = firstName;
+    user.lastName = lastName;
+    user.fatherName = fatherName;
+    user.cnic = cnic;
+    user.dateOfBirth = dateOfBirth;
+    user.city = city;
+    user.state = state;
+    user.country = country;
+    user.phoneNumber = phoneNumber;
+    if (image) user.image = image;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Registration details saved",
+      user,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
