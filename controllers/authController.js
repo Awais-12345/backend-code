@@ -242,7 +242,7 @@ exports.forgotPassword = async (req, res) => {
     const resetToken = user.getResetPasswordToken();
     await user.save({ validateBeforeSave: false });
 
-    const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+    const resetUrl = `https://dashboard-fronted.vercel.app/reset-password/${resetToken}`;
 
     await sendEmail({
       email: user.email,
