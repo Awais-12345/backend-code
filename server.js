@@ -49,7 +49,7 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: [
-      "https://fronted-fyp.vercel.app", // Your actual frontend URL
+      "https://fronted-fyp.vercel.app/", // Your actual frontend URL
       "http://localhost:3000", // For local development
       "http://localhost:3001", // Alternative local port
     ],
