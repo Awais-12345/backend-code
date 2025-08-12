@@ -27,7 +27,9 @@
 //   res.send("backened is fully  deploy");});
   
 // app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-    
+
+
+
 
 const express = require("express");
 const dotenv = require("dotenv");
@@ -40,29 +42,32 @@ dotenv.config();
 connectDB();
 
 const app = express();
-
 app.use(express.json());
 app.use(cookieParser());
 
-// Allowed origins
+// ✅ Allowed origins for local + production
 const allowedOrigins = [
-  "http://localhost:3000", // Local frontend
-  "https://yourfrontend.vercel.app" // Production frontend
+  "http://localhost:3000",                // local frontend
+  "https://yourfrontend.vercel.app"       // production frontend
 ];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (e.g., mobile apps, curl)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true, // Allow cookies & auth headers
+}));
+
+// ✅ Handle preflight requests
+app.options("*", cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 
 // Routes
 app.use("/api/auth", authRoutes);
