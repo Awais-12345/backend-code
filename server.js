@@ -24,7 +24,7 @@ app.use("/api/auth", authRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.get("/", (req, res) => {
-  res.send("backened is fully  deploy");});
+  res.send("backened is fully  deployed");});
   
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     
