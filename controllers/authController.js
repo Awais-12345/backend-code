@@ -1,8 +1,6 @@
 const User = require("../models/User");
 const { resetPasswordEmailTemplate } = require("../utils/email-template");
 const generateToken = require("../utils/generate-token");
-const crypto = require("crypto");
-const sendEmail = require("../utils/send-email"); // You need to create this util
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -223,98 +221,49 @@ exports.updatePassword = async (req, res) => {
     });
   }
 };
+const crypto = require("crypto");
+const sendEmail = require("../utils/send-email"); // You need to create this util
 
 // @desc    Forgot password
 // @route   POST /api/auth/forgotpassword
 // @access  Public
 exports.forgotPassword = async (req, res) => {
-  console.log('🚀 Forgot Password function called');
-  console.log('Request body:', req.body);
-  
   const { email } = req.body;
 
   try {
-    // Validate email
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is required"
-      });
-    }
-
-    console.log('🔍 Looking for user with email:', email);
     const user = await User.findOne({ email });
 
     if (!user) {
-      console.log('❌ User not found with email:', email);
-      return res.status(404).json({
-        success: false,
-        message: "User not found with that email"
-      });
+      return res
+        .status(404)
+        .json({ message: "User not found with that email" });
     }
 
-    console.log('✅ User found:', user.name);
-    
-    // Generate reset token
     const resetToken = user.getResetPasswordToken();
     await user.save({ validateBeforeSave: false });
 
-    console.log('🔑 Reset token generated');
-
-    // Create reset URL
+    // const resetUrl = `https://dashboard-fronted.vercel.app/reset-password/${resetToken}`;
     const resetUrl = `https://frontend-dashborad.vercel.app/reset-password/${resetToken}`;
-    
-    console.log('📧 Sending email to:', user.email);
-    console.log('🔗 Reset URL:', resetUrl);
 
-    // Send email
+
     await sendEmail({
       email: user.email,
       subject: "Password Reset Request",
       message: resetPasswordEmailTemplate(user.name, resetUrl),
     });
 
-    console.log('✅ Email sent successfully');
-
-    res.status(200).json({
-      success: true,
-      message: "Password reset email sent successfully"
-    });
-
+    res.status(200).json({ success: true, message: "Email sent" });
   } catch (error) {
-    console.error('💥 Forgot Password Error:', error);
-    console.error('Error stack:', error.stack);
-    
-    // Clean up on error
+    console.error(error);
     if (user) {
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
       await user.save({ validateBeforeSave: false });
     }
 
-    // Handle specific errors
-    if (error.message.includes('EAUTH')) {
-      return res.status(500).json({
-        success: false,
-        message: "Email authentication failed. Please contact support."
-      });
-    }
-
-    if (error.message.includes('ENOTFOUND')) {
-      return res.status(500).json({
-        success: false,
-        message: "Email service unavailable. Please try again later."
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: "Email could not be sent. Please try again later.",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined
-    });
+    res.status(500).json({ message: "Email could not be sent" });
   }
 };
-
 // @desc    Reset password
 // @route   PUT /api/auth/resetpassword/:resettoken
 // @access  Public
@@ -358,7 +307,6 @@ exports.resetPassword = async (req, res) => {
     });
   }
 };
-
 // controllers/registrationController.js
 const Register = require("../models/Registration");
 
