@@ -1,22 +1,51 @@
-const sgMail = require("@sendgrid/mail");
-require("dotenv").config();
+// utils/send-email.js
+const nodemailer = require('nodemailer');
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const sendEmail = async (options) => {
+  console.log('📧 Gmail: Setting up email transporter...');
+  
+  // Check required environment variables
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error('❌ Missing EMAIL_USER or EMAIL_PASS');
+    throw new Error('Email credentials missing');
+  }
 
-const sendEmail = async ({ email, subject, message }) => {
-  const msg = {
-    to: email,
-    from: {
-      name: process.env.FROM_NAME,
-      email: process.env.FROM_EMAIL,
-    },
-    subject,
-    text: "Please view this email in HTML format.",
-    html: message,
+  console.log('📧 Gmail config:', {
+    host: 'smtp.gmail.com',
+    port: 587,
+    user: process.env.EMAIL_USER,
+    hasPassword: !!process.env.EMAIL_PASS
+  });
+
+  // Create Gmail transporter
+  const transporter = nodemailer.createTransporter({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+
+  // Email message
+  const message = {
+    from: `"${process.env.FROM_NAME || 'Online Registration'}" <${process.env.EMAIL_USER}>`,
+    to: options.email,
+    subject: options.subject,
+    html: options.message
   };
 
-  await sgMail.send(msg);
+  console.log('📧 Sending Gmail to:', options.email);
+
+  try {
+    const info = await transporter.sendMail(message);
+    console.log('✅ Gmail sent successfully!', info.messageId);
+    return info;
+  } catch (error) {
+    console.error('❌ Gmail send failed:', error.message);
+    throw error;
+  }
 };
 
 module.exports = sendEmail;
-   
