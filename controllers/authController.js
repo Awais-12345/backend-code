@@ -263,7 +263,7 @@ exports.forgotPassword = async (req, res) => {
     console.log('🔑 Reset token generated');
 
     // Create reset URL
-    const resetUrl = `https://frontend-dashborad.vercel.app/reset-password/${resetToken}`;
+    const resetUrl = `https://fronted-dashborad.vercel.app/reset-password/${resetToken}`;
     
     console.log('📧 Sending email to:', user.email);
     console.log('🔗 Reset URL:', resetUrl);
