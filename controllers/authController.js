@@ -125,7 +125,7 @@ exports.login = async (req, res) => {
 // @access  Private
 exports.logout = async (req, res) => {
   res.cookie("token", "none", {
-    expires: new Date(Date.now() + 10 * 1000),
+  expires: new Date(Date.now() + 60 * 60 * 1000) // 1 hour
     httpOnly: true,
   });
 
