@@ -125,7 +125,7 @@ exports.login = async (req, res) => {
 // @access  Private
 exports.logout = async (req, res) => {
   res.cookie("token", "none", {
-  expires: new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+    expires: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
     httpOnly: true,
   });
 
@@ -230,7 +230,7 @@ const sendEmail = require("../utils/send-email"); // You need to create this uti
 exports.forgotPassword = async (req, res) => {
   console.log('🚀 Forgot Password function called');
   console.log('Request body:', req.body);
-  
+
   const { email } = req.body;
   let user; // ✅ Properly define user variable
 
@@ -255,7 +255,7 @@ exports.forgotPassword = async (req, res) => {
     }
 
     console.log('✅ User found:', user.name);
-    
+
     // Generate reset token
     const resetToken = user.getResetPasswordToken();
     await user.save({ validateBeforeSave: false });
@@ -264,7 +264,7 @@ exports.forgotPassword = async (req, res) => {
 
     // Create reset URL
     const resetUrl = `https://fronted-dashborad.vercel.app/reset-password/${resetToken}`;
-    
+
     console.log('📧 Sending email to:', user.email);
     console.log('🔗 Reset URL:', resetUrl);
 
@@ -285,7 +285,7 @@ exports.forgotPassword = async (req, res) => {
   } catch (error) {
     console.error('💥 Forgot Password Error:', error);
     console.error('Error message:', error.message);
-    
+
     // Clean up on error - user is now properly defined
     if (user) {
       try {
