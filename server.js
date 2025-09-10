@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 5000;
 
 const allowedOrigin =  [
   "http://localhost:3000", // local frontend
-  "https://frontend-dashborad.vercel.app" // deployed frontend
+  "https://fronted-dashborad.vercel.app" // deployed frontend
 ];
 app.use(express.json());
 app.use(cookieParser());
