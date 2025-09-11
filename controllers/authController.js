@@ -316,35 +316,27 @@ exports.forgotPassword = async (req, res) => {
 // @desc    Reset password
 // @route   PUT /api/auth/resetpassword/:resettoken
 // @access  Public
+// @desc    Reset password
+// @route   PUT /api/auth/resetpassword/:resettoken
+// @access  Public
 exports.resetPassword = async (req, res) => {
   try {
-    const { password, newPassword, confirmPassword } = req.body;
-    
-    // Handle both 'password' and 'newPassword' field names
-    const passwordToSet = password || newPassword;
-    
-    // Validate password is provided
-    if (!passwordToSet) {
+    const { password } = req.body; // 👈 Sirf password expect karenge
+
+    if (!password) {
       return res.status(400).json({
         success: false,
         message: "Password is required",
       });
     }
-    
-    // Validate passwords match if confirmPassword is provided
-    if (confirmPassword && passwordToSet !== confirmPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Passwords do not match",
-      });
-    }
 
-    // Hash the token
+    // Hash the token from params
     const resetPasswordToken = crypto
       .createHash("sha256")
       .update(req.params.resettoken)
       .digest("hex");
 
+    // Find user with valid token
     const user = await User.findOne({
       resetPasswordToken,
       resetPasswordExpire: { $gt: Date.now() },
@@ -358,11 +350,12 @@ exports.resetPassword = async (req, res) => {
     }
 
     // Set new password
-    user.password = passwordToSet;
+    user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save();
 
+    // Optional: issue fresh login token
     const token = generateToken(user._id);
 
     res.status(200).json({
@@ -371,14 +364,16 @@ exports.resetPassword = async (req, res) => {
       token,
     });
   } catch (error) {
-    console.error(error);
+    console.error("💥 Reset Password Error:", error.message);
     res.status(500).json({
       success: false,
       message: "Server Error",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      error:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
+
 // controllers/registrationController.js
 const Register = require("../models/Registration");
 
