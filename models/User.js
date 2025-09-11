@@ -2,40 +2,38 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 
-const userSchema = mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    name: { type: String, required: true, trim: true },
     email: {
       type: String,
       required: true,
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, "Invalid email"],
+      match: [/^\S+@\S+\.\S+$/, "Invalid email"],
     },
-    password: {
-      type: String,
-      required: true,
-      minlength: 6,
-    },
+    password: { type: String, required: true, minlength: 6 },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
+// 🔒 Hash password before save
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, await bcrypt.genSalt(10));
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
+// 🔑 Compare entered password with hashed password
 userSchema.methods.matchPassword = function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };
 
+// 🎟️ Generate and hash password reset token
 userSchema.methods.getResetPasswordToken = function () {
   const resetToken = crypto.randomBytes(20).toString("hex");
 
@@ -44,7 +42,7 @@ userSchema.methods.getResetPasswordToken = function () {
     .update(resetToken)
     .digest("hex");
 
-  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+  this.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
 
   return resetToken;
 };
