@@ -228,94 +228,91 @@ const sendEmail = require("../utils/send-email"); // You need to create this uti
 // @route   POST /api/auth/forgotpassword
 // @access  Public
 exports.forgotPassword = async (req, res) => {
-  console.log('🚀 Forgot Password function called');
-  console.log('Request body:', req.body);
-  
+  console.log("🚀 Forgot Password function called");
+  console.log("Request body:", req.body);
+
   const { email } = req.body;
-  let user; // ✅ Properly define user variable
+  let user;
 
   try {
-    // Validate email
     if (!email) {
       return res.status(400).json({
         success: false,
-        message: "Email is required"
+        message: "Email is required",
       });
     }
 
-    console.log('🔍 Looking for user with email:', email);
+    console.log("🔍 Looking for user with email:", email);
     user = await User.findOne({ email });
 
     if (!user) {
-      console.log('❌ User not found with email:', email);
+      console.log("❌ User not found with email:", email);
       return res.status(404).json({
         success: false,
-        message: "User not found with that email"
+        message: "User not found with that email",
       });
     }
 
-    console.log('✅ User found:', user.name);
-    
+    console.log("✅ User found:", user.name);
+
     // Generate reset token
     const resetToken = user.getResetPasswordToken();
-    await user.save({ validateBeforeSave: false });
 
-    console.log('🔑 Reset token generated');
+    // Debugging logs for tokens
+    console.log("👉 Plain resetToken (send in email):", resetToken);
+    console.log("👉 Hashed resetPasswordToken (stored in DB):", user.resetPasswordToken);
+
+    await user.save({ validateBeforeSave: false });
+    console.log("💾 User saved with reset token & expiry:", user.resetPasswordExpire);
 
     // Create reset URL
     const resetUrl = `https://fronted-dashborad.vercel.app/reset-password/${resetToken}`;
-    
-    console.log('📧 Sending email to:', user.email);
-    console.log('🔗 Reset URL:', resetUrl);
 
-    // Send email using Gmail (not SendGrid)
+    console.log("📧 Sending email to:", user.email);
+    console.log("🔗 Reset URL:", resetUrl);
+
     await sendEmail({
       email: user.email,
       subject: "Password Reset Request",
       message: resetPasswordEmailTemplate(user.name, resetUrl),
     });
 
-    console.log('✅ Gmail sent successfully');
+    console.log("✅ Gmail sent successfully");
 
     res.status(200).json({
       success: true,
-      message: "Password reset email sent successfully"
+      message: "Password reset email sent successfully",
     });
-
   } catch (error) {
-    console.error('💥 Forgot Password Error:', error);
-    console.error('Error message:', error.message);
-    
-    // Clean up on error - user is now properly defined
+    console.error("💥 Forgot Password Error:", error);
+    console.error("Error message:", error.message);
+
     if (user) {
       try {
         user.resetPasswordToken = undefined;
         user.resetPasswordExpire = undefined;
         await user.save({ validateBeforeSave: false });
-        console.log('🧹 User reset token cleaned up');
+        console.log("🧹 User reset token cleaned up");
       } catch (cleanupError) {
-        console.error('❌ Cleanup error:', cleanupError.message);
+        console.error("❌ Cleanup error:", cleanupError.message);
       }
     }
 
-    // Handle Gmail specific errors
-    if (error.message.includes('Invalid login')) {
+    if (error.message.includes("Invalid login")) {
       return res.status(500).json({
         success: false,
-        message: "Gmail authentication failed. Please check email configuration."
+        message: "Gmail authentication failed. Please check email configuration.",
       });
     }
 
     res.status(500).json({
       success: false,
       message: "Email could not be sent. Please try again later.",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
-// @desc    Reset password
-// @route   PUT /api/auth/resetpassword/:resettoken
-// @access  Public
+
 // @desc    Reset password
 // @route   PUT /api/auth/resetpassword/:resettoken
 // @access  Public
