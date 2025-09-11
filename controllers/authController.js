@@ -316,9 +316,6 @@ exports.forgotPassword = async (req, res) => {
 // @desc    Reset password
 // @route   PUT /api/auth/resetpassword/:resettoken
 // @access  Public
-// @desc    Reset password
-// @route   PUT /api/auth/resetpassword/:resettoken
-// @access  Public
 exports.resetPassword = async (req, res) => {
   try {
     const { password, newPassword, confirmPassword } = req.body;
