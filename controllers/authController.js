@@ -190,10 +190,20 @@ exports.updateDetails = async (req, res) => {
 // @access  Private
 exports.updatePassword = async (req, res) => {
   try {
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate required fields
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password and new password are required",
+      });
+    }
+
     const user = await User.findById(req.user.id);
 
     // Check current password
-    const isMatch = await user.matchPassword(req.body.currentPassword);
+    const isMatch = await user.matchPassword(currentPassword);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -201,7 +211,16 @@ exports.updatePassword = async (req, res) => {
       });
     }
 
-    user.password = req.body.newPassword;
+    // Check if new password is different from current
+    const isSamePassword = await user.matchPassword(newPassword);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be different from current password",
+      });
+    }
+
+    user.password = newPassword;
     await user.save();
 
     // Generate new token
@@ -221,18 +240,200 @@ exports.updatePassword = async (req, res) => {
     });
   }
 };
+
 const crypto = require("crypto");
 const sendEmail = require("../utils/send-email"); // You need to create this util
 
 // @desc    Forgot password
 // @route   POST /api/auth/forgotpassword
 // @access  Public
+// exports.forgotPassword = async (req, res) => {
+//   console.log('🚀 Forgot Password function called');
+//   console.log('Request body:', req.body);
+
+//   const { email } = req.body;
+//   let user; // ✅ Properly define user variable
+
+//   try {
+//     // Validate email
+//     if (!email) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Email is required"
+//       });
+//     }
+
+//     console.log('🔍 Looking for user with email:', email);
+//     user = await User.findOne({ email });
+
+//     if (!user) {
+//       console.log('❌ User not found with email:', email);
+//       return res.status(404).json({
+//         success: false,
+//         message: "User not found with that email"
+//       });
+//     }
+
+//     console.log('✅ User found:', user.name);
+
+//     // Generate reset token
+//     const resetToken = user.getResetPasswordToken();
+//     await user.save({ validateBeforeSave: false });
+
+//     console.log('🔑 Reset token generated');
+
+//     // Create reset URL
+//     const resetUrl = `https://fronted-dashborad.vercel.app/reset-password/${resetToken}`;
+
+//     console.log('📧 Sending email to:', user.email);
+//     console.log('🔗 Reset URL:', resetUrl);
+
+//     // Send email using Gmail (not SendGrid)
+//     await sendEmail({
+//       email: user.email,
+//       subject: "Password Reset Request",
+//       message: resetPasswordEmailTemplate(user.name, resetUrl),
+//     });
+
+//     console.log('✅ Gmail sent successfully');
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Password reset email sent successfully"
+//     });
+
+//   } catch (error) {
+//     console.error('💥 Forgot Password Error:', error);
+//     console.error('Error message:', error.message);
+
+//     // Clean up on error - user is now properly defined
+//     if (user) {
+//       try {
+//         user.resetPasswordToken = undefined;
+//         user.resetPasswordExpire = undefined;
+//         await user.save({ validateBeforeSave: false });
+//         console.log('🧹 User reset token cleaned up');
+//       } catch (cleanupError) {
+//         console.error('❌ Cleanup error:', cleanupError.message);
+//       }
+//     }
+
+//     // Handle Gmail specific errors
+//     if (error.message.includes('Invalid login')) {
+//       return res.status(500).json({
+//         success: false,
+//         message: "Gmail authentication failed. Please check email configuration."
+//       });
+//     }
+
+//     res.status(500).json({
+//       success: false,
+//       message: "Email could not be sent. Please try again later.",
+//       error: process.env.NODE_ENV === "development" ? error.message : undefined
+//     });
+//   }
+// };
+// // @desc    Reset password
+// // @route   PUT /api/auth/resetpassword/:resettoken
+// // @access  Public
+// exports.resetPassword = async (req, res) => {
+//   try {
+//     // Hash the token
+//     const resetPasswordToken = crypto
+//       .createHash("sha256")
+//       .update(req.params.resettoken)
+//       .digest("hex");
+
+//     const user = await User.findOne({
+//       resetPasswordToken,
+//       resetPasswordExpire: { $gt: Date.now() },
+//     });
+
+//     if (!user) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid or expired token",
+//       });
+//     }
+
+//     // Set new password
+//     user.password = req.body.password;
+//     user.resetPasswordToken = undefined;
+//     user.resetPasswordExpire = undefined;
+//     await user.save();
+
+//     const token = generateToken(user._id);
+
+//     res.status(200).json({
+//       success: true,
+//       token,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Server Error",
+//     });
+//   }
+// };
+// // controllers/registrationController.js
+// const Register = require("../models/Registration");
+
+// exports.registerDetails = async (req, res) => {
+//   try {
+//     const {
+//       firstName,
+//       lastName,
+//       fatherName,
+//       cnic,
+//       dateOfBirth,
+//       city,
+//       state,
+//       country,
+//       phoneNumber,
+//     } = req.body;
+
+//     const image = req.file?.filename;
+
+//     const user = await Register.findById(req.user.id);
+
+//     if (!user) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "User not found" });
+//     }
+
+//     user.firstName = firstName;
+//     user.lastName = lastName;
+//     user.fatherName = fatherName;
+//     user.cnic = cnic;
+//     user.dateOfBirth = dateOfBirth;
+//     user.city = city;
+//     user.state = state;
+//     user.country = country;
+//     user.phoneNumber = phoneNumber;
+//     if (image) user.image = image;
+
+//     await user.save();
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Registration details saved",
+//       user,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ success: false, message: "Server Error" });
+//   }
+// };
+    
+
 exports.forgotPassword = async (req, res) => {
   console.log('🚀 Forgot Password function called');
   console.log('Request body:', req.body);
 
   const { email } = req.body;
-  let user; // ✅ Properly define user variable
+  let user;
 
   try {
     // Validate email
@@ -268,14 +469,14 @@ exports.forgotPassword = async (req, res) => {
     console.log('📧 Sending email to:', user.email);
     console.log('🔗 Reset URL:', resetUrl);
 
-    // Send email using Gmail (not SendGrid)
+    // Send email
     await sendEmail({
       email: user.email,
       subject: "Password Reset Request",
       message: resetPasswordEmailTemplate(user.name, resetUrl),
     });
 
-    console.log('✅ Gmail sent successfully');
+    console.log('✅ Email sent successfully');
 
     res.status(200).json({
       success: true,
@@ -286,7 +487,7 @@ exports.forgotPassword = async (req, res) => {
     console.error('💥 Forgot Password Error:', error);
     console.error('Error message:', error.message);
 
-    // Clean up on error - user is now properly defined
+    // Clean up on error
     if (user) {
       try {
         user.resetPasswordToken = undefined;
@@ -298,11 +499,11 @@ exports.forgotPassword = async (req, res) => {
       }
     }
 
-    // Handle Gmail specific errors
+    // Handle email specific errors
     if (error.message.includes('Invalid login')) {
       return res.status(500).json({
         success: false,
-        message: "Gmail authentication failed. Please check email configuration."
+        message: "Email authentication failed. Please check email configuration."
       });
     }
 
@@ -313,12 +514,31 @@ exports.forgotPassword = async (req, res) => {
     });
   }
 };
-// @desc    Reset password
+
+// @desc    Reset password (using token from email)
 // @route   PUT /api/auth/resetpassword/:resettoken
 // @access  Public
 exports.resetPassword = async (req, res) => {
   try {
-    // Hash the token
+    const { password, confirmPassword } = req.body;
+
+    // Validate required fields
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: "Password is required",
+      });
+    }
+
+    // Check if passwords match (if confirmPassword is provided)
+    if (confirmPassword && password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords do not match",
+      });
+    }
+
+    // Hash the token from URL
     const resetPasswordToken = crypto
       .createHash("sha256")
       .update(req.params.resettoken)
@@ -337,7 +557,7 @@ exports.resetPassword = async (req, res) => {
     }
 
     // Set new password
-    user.password = req.body.password;
+    user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save();
@@ -346,6 +566,7 @@ exports.resetPassword = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      message: "Password reset successful",
       token,
     });
   } catch (error) {
@@ -353,56 +574,57 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server Error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
-// controllers/registrationController.js
-const Register = require("../models/Registration");
 
-exports.registerDetails = async (req, res) => {
+// @desc    Change password without current password (Admin only)
+// @route   PUT /api/auth/changepassword
+// @access  Private (Admin)
+exports.changePasswordAdmin = async (req, res) => {
   try {
-    const {
-      firstName,
-      lastName,
-      fatherName,
-      cnic,
-      dateOfBirth,
-      city,
-      state,
-      country,
-      phoneNumber,
-    } = req.body;
+    const { newPassword, userId } = req.body;
 
-    const image = req.file?.filename;
-
-    const user = await Register.findById(req.user.id);
-
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+    // Check if user is admin (add your admin check logic)
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin privileges required.",
+      });
     }
 
-    user.firstName = firstName;
-    user.lastName = lastName;
-    user.fatherName = fatherName;
-    user.cnic = cnic;
-    user.dateOfBirth = dateOfBirth;
-    user.city = city;
-    user.state = state;
-    user.country = country;
-    user.phoneNumber = phoneNumber;
-    if (image) user.image = image;
+    // Validate required fields
+    if (!newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password is required",
+      });
+    }
 
+    const targetUserId = userId || req.user.id;
+    const user = await User.findById(targetUserId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    user.password = newPassword;
     await user.save();
 
     res.status(200).json({
       success: true,
-      message: "Registration details saved",
-      user,
+      message: "Password changed successfully",
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server Error" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
